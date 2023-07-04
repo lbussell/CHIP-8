@@ -39,25 +39,24 @@ public class Cpu : IChip8Cpu {
         byte kk = (byte) (_opcode & 0x00FF);
         ushort nnn = (ushort) (_opcode & 0x0FFF);
 
-        bool incrementOpcode = true;
+        bool incrementPc = true;
 
         switch (_opcode & 0xF000)
         {
             case 0x0000:
                 if (kk == 0xEE)
                 {
-                    // Return from a subroutine
-
+                    // 0x00EE: Return from a subroutine
                 }
                 else if (y == 0xE)
                 {
-                    // Clear display
+                    // 0x00E0: Clear display
                     _display.Clear();
                 }
                 break;
-            case 0x1000:
+            case 0x1000: // 1NNN: Jump to NNN
                 _programCounter = nnn;
-                incrementOpcode = false;
+                incrementPc = false;
                 break;
             case 0x6000: // 6XKK: Set register VX to KK
                 _v[x] = kk;
@@ -76,7 +75,7 @@ public class Cpu : IChip8Cpu {
                 break;
         }
 
-        if (incrementOpcode)
+        if (incrementPc)
         {
             _programCounter += 2;
         }
@@ -90,10 +89,12 @@ public class Cpu : IChip8Cpu {
         byte x = _v[xRegister];
         byte y = _v[yRegister];
 
+        // We will set VF if we turn a pixel off
         _v[0xF] = 0;
 
         for (byte spriteRow = 0; spriteRow < spriteHeight; spriteRow++)
         {
+            // The whole sprite row fits in one byte
             byte sprite = _memory.Get((ushort) (_i + spriteRow));
 
             for (byte spriteCol = 0; spriteCol < spriteWidth; spriteCol++)
