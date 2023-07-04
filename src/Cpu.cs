@@ -44,6 +44,7 @@ public class Cpu : IChip8Cpu
         ushort nnn = (ushort)(_opcode & 0x0FFF);
 
         bool incrementPc = true;
+        bool underflow = false;
 
         switch (_opcode & 0xF000)
         {
@@ -101,26 +102,39 @@ public class Cpu : IChip8Cpu
                     case 0x3: // 8XY3: Set VX = VX XOR VY 
                         _v[x] = (byte)(_v[x] ^ _v[y]);
                         break;
-                    case 0x4: // 8XY4: Set Vx = Vx + Vy, set VF = carry
+                    case 0x4: // 8XY4
+                        // add vY to vX, vF is set to 1 if an overflow happened, to 0 if not, even if X=F!
                         int result = _v[x] + _v[y];
-                        _v[0xF] = (byte)((result & 0xFF00) > 0 ? 1 : 0);
                         _v[x] = (byte)(result & 0xFF);
+                        _v[0xF] = (byte)((result & 0xFF00) > 0 ? 1 : 0);
                         break;
-                    case 0x5: // 8XY5: Set VX = VX - VY, set VF = NOT borrow
-                        _v[0xF] = (byte)(_v[x] > _v[y] ? 1 : 0);
+                    case 0x5: // 8XY5
+                        // subtract vY from vX, vF is set to 0 if an underflow happened, to 1 if not, even if X=F!
+                        underflow = _v[y] > _v[x];
                         _v[x] = (byte)(_v[x] - _v[y]);
+                        _v[0xF] = (byte)(underflow ? 0 : 1);
                         break;
-                    case 0x6: // 8XY6: Set VX = VX SHR 1
-                        _v[0xF] = (byte)((_v[x] & 0x1) == 1 ? 1 : 0);
-                        _v[x] /= 2;
+                    case 0x6: // 8XY6
+                    case 0xE: // 8XYE
+                        _v[x] = _v[y];
+                        byte shiftedOut;
+                        if (n == 0x6)
+                        {
+                            shiftedOut = (byte) (_v[x] & 0x1);
+                            _v[x] >>= 1;
+                        }
+                        else
+                        {
+                            shiftedOut = (byte) (_v[x] & 0x80);
+                            _v[x] <<= 1;
+                        }
+                        _v[0xF] = (byte) (shiftedOut > 0 ? 1 : 0);
                         break;
-                    case 0x7: // 8XY5: Set VX = VY - VX, set VF = NOT borrow
-                        _v[0xF] = (byte)(_v[y] > _v[x] ? 1 : 0);
+                    case 0x7: // 8XY7
+                        // set vX to the result of subtracting vX from vY, vF is set to 0 if an underflow happened, to 1 if not, even if X=F!
+                        underflow = _v[x] > _v[y];
                         _v[x] = (byte)(_v[y] - _v[x]);
-                        break;
-                    case 0xE: // Set VX = VX SHL 1
-                        _v[0xF] = (byte)((_v[x] & 0x80) > 1 ? 1 : 0);
-                        _v[x] *= 2;
+                        _v[0xF] = (byte)(underflow ? 0 : 1);
                         break;
                     default:
                         break;
