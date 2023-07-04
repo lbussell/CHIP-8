@@ -1,6 +1,7 @@
 namespace Cship8;
 
-public class Cpu : IChip8Cpu {
+public class Cpu : IChip8Cpu
+{
     private readonly IChip8Memory _memory;
     private readonly I1BitDisplay _display;
 
@@ -16,11 +17,14 @@ public class Cpu : IChip8Cpu {
     private byte _delay;
     private byte _sound;
 
-    public Cpu(IChip8Memory memory, I1BitDisplay display)
+    private readonly Random _random;
+
+    public Cpu(IChip8Memory memory, I1BitDisplay display, int? seed = null)
     {
         _memory = memory;
         _display = display;
         _programCounter = Memory.RomOffset;
+        _random = seed is not null ? new Random((int)seed) : new Random();
     }
 
     public void EmulateCycle()
@@ -33,11 +37,11 @@ public class Cpu : IChip8Cpu {
             * X Y N
             * N N N
         **/
-        byte x = (byte) ((_opcode & 0x0F00) >> 8);
-        byte y = (byte) ((_opcode & 0x00F0) >> 4);
-        byte n = (byte) ((_opcode & 0x000F));
-        byte kk = (byte) (_opcode & 0x00FF);
-        ushort nnn = (ushort) (_opcode & 0x0FFF);
+        byte x = (byte)((_opcode & 0x0F00) >> 8);
+        byte y = (byte)((_opcode & 0x00F0) >> 4);
+        byte n = (byte)((_opcode & 0x000F));
+        byte kk = (byte)(_opcode & 0x00FF);
+        ushort nnn = (ushort)(_opcode & 0x0FFF);
 
         bool incrementPc = true;
 
@@ -70,17 +74,131 @@ public class Cpu : IChip8Cpu {
                     _programCounter += 2;
                 }
                 break;
+            case 0x4000:
+                if (_v[x] != kk)
+                {
+                    _programCounter += 2;
+                }
+                break;
             case 0x6000: // 6XKK: Set register VX to KK
                 _v[x] = kk;
                 break;
             case 0x7000: // 7XKK: Add KK to VX
                 _v[x] += kk;
                 break;
+            case 0x8000:
+                switch (n)
+                {
+                    case 0x0: // 8XY0: Set VX = VY
+                        _v[x] = _v[y];
+                        break;
+                    case 0x1: // 8XY1: Set VX = VX OR VY
+                        _v[x] = (byte)(_v[x] | _v[y]);
+                        break;
+                    case 0x2: // 8XY2: Set VX = VX AND VY
+                        _v[x] = (byte)(_v[x] & _v[y]);
+                        break;
+                    case 0x3: // 8XY3: Set VX = VX XOR VY 
+                        _v[x] = (byte)(_v[x] ^ _v[y]);
+                        break;
+                    case 0x4: // 8XY4: Set Vx = Vx + Vy, set VF = carry
+                        int result = _v[x] + _v[y];
+                        _v[0xF] = (byte)((result & 0xFF00) > 0 ? 1 : 0);
+                        _v[x] = (byte)(result & 0xFF);
+                        break;
+                    case 0x5: // 8XY5: Set VX = VX - VY, set VF = NOT borrow
+                        _v[0xF] = (byte)(_v[x] > _v[y] ? 1 : 0);
+                        _v[x] = (byte)(_v[x] - _v[y]);
+                        break;
+                    case 0x6: // 8XY6: Set VX = VX SHR 1
+                        _v[0xF] = (byte)((_v[x] & 0x1) == 1 ? 1 : 0);
+                        _v[x] /= 2;
+                        break;
+                    case 0x7: // 8XY5: Set VX = VY - VX, set VF = NOT borrow
+                        _v[0xF] = (byte)(_v[y] > _v[x] ? 1 : 0);
+                        _v[x] = (byte)(_v[y] - _v[x]);
+                        break;
+                    case 0xE: // Set VX = VX SHL 1
+                        _v[0xF] = (byte)((_v[x] & 0x80) > 1 ? 1 : 0);
+                        _v[x] *= 2;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case 0x9000: // 9XY0: Skip next instruction if Vx != Vy
+                if (_v[x] != _v[y])
+                {
+                    _programCounter += 2;
+                }
+                break;
             case 0xA000: // ANNN: Set register i to NNN
                 _i = nnn;
                 break;
+            case 0xB000: // BNNN: Jump to location NNN + V0
+                _programCounter = (ushort)(_v[0] + nnn);
+                incrementPc = false;
+                break;
+            case 0xC000: // CXKK: Set VX = random byte AND KK
+                byte[] randomByte = new byte[1];
+                _random.NextBytes(randomByte);
+                _v[x] = (byte)(randomByte[0] & kk);
+                break;
             case 0xD000:
                 Dxyn(x, y, n);
+                break;
+            case 0xE000:
+                if (kk == 0x9E)
+                {
+                    // Skip next instruction if key with the value of VX is pressed
+                }
+                else if (kk == 0xA1)
+                {
+                    // Skip next instruction if key with the value of VX is not pressed.
+                }
+                break;
+            case 0xF000:
+                switch (kk)
+                {
+                    case 0x07:
+                        _v[x] = _delay;
+                        break;
+                    case 0x0A:
+                        // Wait for a key press, store the value of the key in VX
+                        break;
+                    case 0x15:
+                        _delay = _v[x];
+                        break;
+                    case 0x18:
+                        _sound = _v[x];
+                        break;
+                    case 0x1E:
+                        _i += _v[x];
+                        break;
+                    case 0x29:
+                        _i = _memory.Get((ushort)(Memory.FontOffset + _v[x] * Memory.FontLength));
+                        break;
+                    case 0x33:
+                        byte vx = _v[x];
+                        _memory.Set(_i, (byte)(vx / 100));
+                        _memory.Set((ushort)(_i + 1), (byte)((vx / 10) % 10));
+                        _memory.Set((ushort)(_i + 2), (byte)(vx % 10));
+                        break;
+                    case 0x55:
+                        for (byte i = 0; i <= x; i += 1)
+                        {
+                            _memory.Set((ushort)(_i++), _v[i]);
+                        }
+                        break;
+                    case 0x65:
+                        for (byte i = 0; i <= x; i += 1)
+                        {
+                            _v[i] = _memory.Get((ushort)(_i++));
+                        }
+                        break;
+                    default:
+                        break;
+                }
                 break;
             default:
                 Console.WriteLine($"Instruction {_opcode.ToString("X4")} not implemented");
@@ -107,7 +225,7 @@ public class Cpu : IChip8Cpu {
         for (byte spriteRow = 0; spriteRow < spriteHeight; spriteRow++)
         {
             // The whole sprite row fits in one byte
-            byte sprite = _memory.Get((ushort) (_i + spriteRow));
+            byte sprite = _memory.Get((ushort)(_i + spriteRow));
 
             for (byte spriteCol = 0; spriteCol < spriteWidth; spriteCol++)
             {

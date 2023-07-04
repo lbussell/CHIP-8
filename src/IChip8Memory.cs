@@ -3,6 +3,7 @@ namespace Cship8;
 public interface IChip8Memory
 {
     public static ushort FontOffset { get; }
+    public static ushort FontLength { get; }
     public static ushort RomOffset { get; }
 
     public void LoadRom(byte[] rom);

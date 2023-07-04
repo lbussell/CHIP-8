@@ -4,6 +4,7 @@ public class Memory : IChip8Memory
 {
     public static ushort RomOffset { get => 0x0200; }
     public static ushort FontOffset { get => 0x0050; }
+    public static ushort FontLength { get => 5; }
 
     private const uint _Size = 4096;
     private const uint _FontEnd = 0x009F;
