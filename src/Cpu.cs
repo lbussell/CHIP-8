@@ -9,7 +9,7 @@ public class Cpu : IChip8Cpu {
 
     private ushort _opcode;
     private ushort _programCounter;
-    private byte _stackPointer;
+    private byte _stackPointer = 0;
     private ushort[] _stack = new ushort[STACK_SIZE];
     private byte[] _v = new byte[NUM_V_REGISTERS];
     private ushort _i;
@@ -47,6 +47,7 @@ public class Cpu : IChip8Cpu {
                 if (kk == 0xEE)
                 {
                     // 0x00EE: Return from a subroutine
+                    _programCounter = _stack[--_stackPointer];
                 }
                 else if (y == 0xE)
                 {
@@ -57,6 +58,17 @@ public class Cpu : IChip8Cpu {
             case 0x1000: // 1NNN: Jump to NNN
                 _programCounter = nnn;
                 incrementPc = false;
+                break;
+            case 0x2000: // 2NNN: Call subroutine at NNN
+                _stack[_stackPointer++] = _programCounter;
+                _programCounter = nnn;
+                incrementPc = false;
+                break;
+            case 0x3000: // 3XKK: skip next instruction if VX = KK
+                if (_v[x] == kk)
+                {
+                    _programCounter += 2;
+                }
                 break;
             case 0x6000: // 6XKK: Set register VX to KK
                 _v[x] = kk;
