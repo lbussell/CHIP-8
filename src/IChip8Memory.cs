@@ -4,6 +4,7 @@ public interface IChip8Memory
 {
     public static ushort FontOffset { get; }
     public static ushort RomOffset { get; }
+
     public void LoadRom(byte[] rom);
     public byte Get(ushort address);
     public ushort GetInstruction(ushort pc);
