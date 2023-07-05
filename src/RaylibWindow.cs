@@ -1,9 +1,13 @@
+using System;
+using System.Timers;
 using Raylib_cs;
 
 namespace Cship8;
 
 internal class RaylibWindow
 {
+    public bool WindowShouldClose { get => Raylib.WindowShouldClose(); }
+
     private const int TARGET_FPS = 60;
 
     private int _scale;
@@ -15,40 +19,46 @@ internal class RaylibWindow
         _display = display;
 
         Raylib.InitWindow(
-            _display.Width * _scale,
-            _display.Height * _scale,
+            display.Width * _scale,
+            display.Height * _scale,
             title);
 
         Raylib.ClearBackground(Color.BLACK);
 
-        DrawScreen(_display, _scale);
+        DrawScreen();
     }
 
-    public void Loop(Action runLoop)
+    public void Loop(Action runCpuCycle, int cyclesPerSec = 500, int targetFps = 60)
     {
-        Raylib.SetTargetFPS(TARGET_FPS);
+        Raylib.SetTargetFPS(targetFps);
+
+        System.Timers.Timer cycleTimer = new System.Timers.Timer((int) (1000 / cyclesPerSec));
+        cycleTimer.Elapsed += (sender, e) => runCpuCycle();
+
+        cycleTimer.Start();
 
         while (!Raylib.WindowShouldClose())
         {
-            runLoop();
-            DrawScreen(_display, _scale);
+            DrawScreen();
         }
 
+        cycleTimer.Stop();
+        cycleTimer.Dispose();
         Raylib.CloseWindow();
     }
 
-    private static void DrawScreen(I1BitDisplay display, int scale)
+    public void DrawScreen()
     {
         Raylib.BeginDrawing();
         Raylib.ClearBackground(Color.BLACK);
 
-        for (int r = 0; r < display.Height; r++)
+        for (int r = 0; r < _display.Height; r++)
         {
-            for (int c = 0; c < display.Width; c++)
+            for (int c = 0; c < _display.Width; c++)
             {
-                if (display.GetPixel(r, c))
+                if (_display.GetPixel(r, c))
                 {
-                    DrawPixel(r, c, display, scale);
+                    DrawPixel(r, c, _display, _scale);
                 }
             }
         }

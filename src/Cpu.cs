@@ -4,9 +4,11 @@ public class Cpu : IChip8Cpu
 {
     private readonly IChip8Memory _memory;
     private readonly I1BitDisplay _display;
+    private readonly IChip8Input _input;
 
     private const int STACK_SIZE = 16;
     private const int NUM_V_REGISTERS = 16;
+    private const int INSTRUCTION_SIZE = 2;
 
     private ushort _opcode;
     private ushort _programCounter;
@@ -16,13 +18,15 @@ public class Cpu : IChip8Cpu
     private ushort _i;
     private byte _delay;
     private byte _sound;
+    private bool _halted = false;
 
     private readonly Random _random;
 
-    public Cpu(IChip8Memory memory, I1BitDisplay display, int? seed = null)
+    public Cpu(IChip8Memory memory, I1BitDisplay display, IChip8Input input, int? seed = null)
     {
         _memory = memory;
         _display = display;
+        _input = input;
         _programCounter = Memory.RomOffset;
         _random = seed is not null ? new Random((int)seed) : new Random();
     }
@@ -46,6 +50,7 @@ public class Cpu : IChip8Cpu
         bool incrementPc = true;
         bool underflow = false;
 
+        // Console.Write(_opcode.ToString("X4"));
         switch (_opcode & 0xF000)
         {
             case 0x0000:
@@ -72,13 +77,19 @@ public class Cpu : IChip8Cpu
             case 0x3000: // 3XKK: skip next instruction if VX = KK
                 if (_v[x] == kk)
                 {
-                    _programCounter += 2;
+                    _programCounter += INSTRUCTION_SIZE;
                 }
                 break;
             case 0x4000:
                 if (_v[x] != kk)
                 {
-                    _programCounter += 2;
+                    _programCounter += INSTRUCTION_SIZE;
+                }
+                break;
+            case 0x5000:
+                if (_v[x] == _v[y])
+                {
+                    _programCounter += INSTRUCTION_SIZE;
                 }
                 break;
             case 0x6000: // 6XKK: Set register VX to KK
@@ -143,7 +154,7 @@ public class Cpu : IChip8Cpu
             case 0x9000: // 9XY0: Skip next instruction if Vx != Vy
                 if (_v[x] != _v[y])
                 {
-                    _programCounter += 2;
+                    _programCounter += INSTRUCTION_SIZE;
                 }
                 break;
             case 0xA000: // ANNN: Set register i to NNN
@@ -162,13 +173,11 @@ public class Cpu : IChip8Cpu
                 Dxyn(x, y, n);
                 break;
             case 0xE000:
-                if (kk == 0x9E)
+                bool keyDown = _input.IsKeyDown(_v[x]);
+                if (kk == 0x9E && keyDown || kk == 0xA1 && !keyDown)
                 {
                     // Skip next instruction if key with the value of VX is pressed
-                }
-                else if (kk == 0xA1)
-                {
-                    // Skip next instruction if key with the value of VX is not pressed.
+                    _programCounter += INSTRUCTION_SIZE;
                 }
                 break;
             case 0xF000:
@@ -179,6 +188,12 @@ public class Cpu : IChip8Cpu
                         break;
                     case 0x0A:
                         // Wait for a key press, store the value of the key in VX
+                        _halted = true;
+                        if (_input.AnyKeyDown())
+                        {
+                            _halted = false;
+                            _v[x] = _input.GetFirstKeyDown();
+                        }
                         break;
                     case 0x15:
                         _delay = _v[x];
@@ -219,9 +234,9 @@ public class Cpu : IChip8Cpu
                 break;
         }
 
-        if (incrementPc)
+        if (incrementPc && !_halted)
         {
-            _programCounter += 2;
+            _programCounter += INSTRUCTION_SIZE;
         }
     }
 

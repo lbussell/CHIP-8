@@ -12,7 +12,8 @@ internal class Program
 
         byte[] rom = File.ReadAllBytes(romFilePath);
 
-        Chip8Console console = new();
+        RaylibInput input = new();
+        Chip8Console console = new(input);
         console.LoadRom(rom);
 
         RaylibWindow window = new("C#IP-8", console.Display);
