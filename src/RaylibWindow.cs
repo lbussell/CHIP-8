@@ -1,5 +1,5 @@
 using System;
-using System.Timers;
+using System.Diagnostics;
 using Raylib_cs;
 
 namespace Cship8;
@@ -28,22 +28,48 @@ internal class RaylibWindow
         DrawScreen();
     }
 
-    public void Loop(Action runCpuCycle, int cyclesPerSec = 500, int targetFps = 60)
+    public void Loop(Action runCpuCycle, int cpuCyclesPerSec = 500, int targetFps = 60)
     {
-        Raylib.SetTargetFPS(targetFps);
+        // Raylib.SetTargetFPS(targetFps);
 
-        System.Timers.Timer cycleTimer = new System.Timers.Timer((int) (1000 / cyclesPerSec));
-        cycleTimer.Elapsed += (sender, e) => runCpuCycle();
+        int cycleIntervalMs = (int)(1000.0 / cpuCyclesPerSec);
+        int drawIntervalMs = (int)(1000.0 / targetFps);
+
+        long elapsedMs;
+
+        Stopwatch cycleTimer = new Stopwatch();
+        long lastCycleTime = 0;
+        long lastCpuCycleLength = 0;
+
+        Stopwatch displayTimer = new Stopwatch();
+        long lastDrawTime = 0;
 
         cycleTimer.Start();
+        displayTimer.Start();
 
         while (!Raylib.WindowShouldClose())
         {
-            DrawScreen();
+            elapsedMs = cycleTimer.ElapsedMilliseconds;
+
+            if (elapsedMs - lastCycleTime >= cycleIntervalMs)
+            {
+                lastCycleTime = elapsedMs;
+                runCpuCycle();
+                lastCpuCycleLength = elapsedMs - lastCycleTime;
+                lastCycleTime = elapsedMs;
+            }
+
+            if (elapsedMs - lastDrawTime >= drawIntervalMs)
+            {
+                DrawScreen();
+                lastDrawTime = elapsedMs;
+            }
+
+            Thread.Sleep((int) (cycleIntervalMs - lastCpuCycleLength));
         }
 
+        displayTimer.Stop();
         cycleTimer.Stop();
-        cycleTimer.Dispose();
         Raylib.CloseWindow();
     }
 
