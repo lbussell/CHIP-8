@@ -27,8 +27,6 @@ internal class RaylibWindow
 
     public void Loop(Action runCpuCycle, Action updateTimers, int cpuCyclesPerSec = 15*60, int targetFps = 60)
     {
-        // Raylib.SetTargetFPS(targetFps);
-
         int cycleIntervalMs = (int)(1000.0 / cpuCyclesPerSec);
         int drawIntervalMs = (int)(1000.0 / targetFps);
 
@@ -55,6 +53,7 @@ internal class RaylibWindow
 
             if (elapsedMs - lastDrawTime >= drawIntervalMs)
             {
+                updateTimers();
                 DrawScreen();
                 lastDrawTime = elapsedMs;
             }

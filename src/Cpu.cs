@@ -246,8 +246,6 @@ public class Cpu : IChip8Cpu
                 break;
         }
 
-        UpdateTimers();
-
         if (incrementPc && !_halted)
         {
             _programCounter += INSTRUCTION_SIZE;
