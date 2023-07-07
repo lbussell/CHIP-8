@@ -25,7 +25,7 @@ internal class RaylibWindow
         DrawScreen();
     }
 
-    public void Loop(Action runCpuCycle, Action updateTimers, int cpuCyclesPerSec = 500, int targetFps = 60)
+    public void Loop(Action runCpuCycle, Action updateTimers, int cpuCyclesPerSec = 15*60, int targetFps = 60)
     {
         // Raylib.SetTargetFPS(targetFps);
 

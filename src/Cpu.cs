@@ -62,8 +62,6 @@ public class Cpu : IChip8Cpu
         bool incrementPc = true;
         bool underflow = false;
 
-        // Console.Write(_opcode.ToString("X4"));
-        // Console.WriteLine(_programCounter.ToString("X4"));
         switch (_opcode & 0xF000)
         {
             case 0x0000:
@@ -202,10 +200,11 @@ public class Cpu : IChip8Cpu
                     case 0x0A:
                         // Wait for a key press, store the value of the key in VX
                         _halted = true;
-                        if (_input.AnyKeyDown())
+                        byte? k = _input.GetFirstKeyUp();
+                        if (k != null)
                         {
                             _halted = false;
-                            _v[x] = _input.GetFirstKeyDown();
+                            _v[x] = (byte) k;
                         }
                         break;
                     case 0x15:
@@ -246,6 +245,8 @@ public class Cpu : IChip8Cpu
                 Console.WriteLine($"Instruction {_opcode.ToString("X4")} not implemented");
                 break;
         }
+
+        UpdateTimers();
 
         if (incrementPc && !_halted)
         {

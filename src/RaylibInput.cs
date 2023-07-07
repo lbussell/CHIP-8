@@ -27,19 +27,28 @@ public class RaylibInput : IChip8Input
         Raylib_cs.KeyboardKey.KEY_F,
     };
 
+    private bool[] _lastKeysDown = new bool[keys.Length];
+
     public RaylibInput() { }
 
     public bool IsKeyDown(byte key) => CheckKeyPressed(key);
 
-    public bool AnyKeyDown() => keys
-            .Select(key => CheckKeyPressed(key))
-            .Any(isDown => isDown);
-
-    public byte GetFirstKeyDown()
+    public byte? GetFirstKeyUp()
     {
-        Raylib_cs.KeyboardKey key = (Raylib_cs.KeyboardKey) Raylib.GetKeyPressed();
-        var res = (byte) Array.IndexOf(keys, key);
-        return res;
+        for (byte i = 0; i < keys.Length; i += 1)
+        {
+            // if key was pressed last frame and not this frame
+            if (_lastKeysDown[i] && !CheckKeyPressed(i))
+            {
+                Array.Clear(_lastKeysDown);
+                return i;
+            }
+            else
+            {
+                _lastKeysDown[i] = CheckKeyPressed(i);
+            }
+        }
+        return null;
     }
 
     private static bool CheckKeyPressed(byte key) 
