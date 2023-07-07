@@ -22,4 +22,5 @@ public class Chip8Console
     public void LoadRom(byte[] rom) => _memory.LoadRom(rom);
 
     public void EmulateCycle() => _cpu.EmulateCycle();
+    public void UpdateTimers() => _cpu.UpdateTimers();
 }

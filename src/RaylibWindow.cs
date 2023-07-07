@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using Raylib_cs;
 
@@ -7,8 +6,6 @@ namespace Cship8;
 internal class RaylibWindow
 {
     public bool WindowShouldClose { get => Raylib.WindowShouldClose(); }
-
-    private const int TARGET_FPS = 60;
 
     private int _scale;
     private I1BitDisplay _display;
@@ -28,7 +25,7 @@ internal class RaylibWindow
         DrawScreen();
     }
 
-    public void Loop(Action runCpuCycle, int cpuCyclesPerSec = 500, int targetFps = 60)
+    public void Loop(Action runCpuCycle, Action updateTimers, int cpuCyclesPerSec = 500, int targetFps = 60)
     {
         // Raylib.SetTargetFPS(targetFps);
 
@@ -40,12 +37,9 @@ internal class RaylibWindow
         Stopwatch cycleTimer = new Stopwatch();
         long lastCycleTime = 0;
         long lastCpuCycleLength = 0;
-
-        Stopwatch displayTimer = new Stopwatch();
         long lastDrawTime = 0;
 
         cycleTimer.Start();
-        displayTimer.Start();
 
         while (!Raylib.WindowShouldClose())
         {
@@ -68,7 +62,6 @@ internal class RaylibWindow
             Thread.Sleep((int) (cycleIntervalMs - lastCpuCycleLength));
         }
 
-        displayTimer.Stop();
         cycleTimer.Stop();
         Raylib.CloseWindow();
     }

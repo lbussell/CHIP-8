@@ -17,6 +17,6 @@ internal class Program
         console.LoadRom(rom);
 
         RaylibWindow window = new("C#IP-8", console.Display);
-        window.Loop(console.EmulateCycle);
+        window.Loop(console.EmulateCycle, console.UpdateTimers);
     }
 }

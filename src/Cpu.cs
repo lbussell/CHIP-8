@@ -31,6 +31,18 @@ public class Cpu : IChip8Cpu
         _random = seed is not null ? new Random((int)seed) : new Random();
     }
 
+    public void UpdateTimers()
+    {
+        if (_delay > 0)
+        {
+            _delay -= 1;
+        }
+        if (_sound > 0)
+        {
+            _sound -= 1;
+        }
+    }
+
     public void EmulateCycle()
     {
         _opcode = _memory.GetInstruction(_programCounter);
@@ -51,6 +63,7 @@ public class Cpu : IChip8Cpu
         bool underflow = false;
 
         // Console.Write(_opcode.ToString("X4"));
+        // Console.WriteLine(_programCounter.ToString("X4"));
         switch (_opcode & 0xF000)
         {
             case 0x0000:
