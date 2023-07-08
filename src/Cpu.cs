@@ -257,8 +257,8 @@ public class Cpu : IChip8Cpu
         // All sprites are 8 pixels wide
         byte spriteWidth = 8;
 
-        byte x = _v[xRegister];
-        byte y = _v[yRegister];
+        byte x = (byte) (_v[xRegister] % (_display.Width));
+        byte y = (byte) (_v[yRegister] % (_display.Height));
 
         // We will set VF if we turn a pixel off
         _v[0xF] = 0;
