@@ -117,12 +117,18 @@ public class Cpu : IChip8Cpu
                         break;
                     case 0x1: // 8XY1: Set VX = VX OR VY
                         _v[x] = (byte)(_v[x] | _v[y]);
+                        // Quirk 4 - Reset VF (https://chip8.gulrak.net/#quirk4)
+                        _v[0xF] = 0;
                         break;
                     case 0x2: // 8XY2: Set VX = VX AND VY
                         _v[x] = (byte)(_v[x] & _v[y]);
+                        // Quirk 4 - Reset VF (https://chip8.gulrak.net/#quirk4)
+                        _v[0xF] = 0;
                         break;
                     case 0x3: // 8XY3: Set VX = VX XOR VY 
                         _v[x] = (byte)(_v[x] ^ _v[y]);
+                        // Quirk 4 - Reset VF (https://chip8.gulrak.net/#quirk4)
+                        _v[0xF] = 0;
                         break;
                     case 0x4: // 8XY4
                         // add vY to vX, vF is set to 1 if an overflow happened, to 0 if not, even if X=F!
@@ -138,6 +144,8 @@ public class Cpu : IChip8Cpu
                         break;
                     case 0x6: // 8XY6
                     case 0xE: // 8XYE
+                        // Quirk 5: https://chip8.gulrak.net/#quirk5
+                        y = x;
                         _v[x] = _v[y];
                         byte shiftedOut;
                         if (n == 0x6)
@@ -172,7 +180,7 @@ public class Cpu : IChip8Cpu
                 _i = nnn;
                 break;
             case 0xB000: // BNNN: Jump to location NNN + V0
-                _programCounter = (ushort)(_v[0] + nnn);
+                _programCounter = (ushort)(/*_v[0]*/ _v[(nnn >> 8) & 0xF] + nnn);
                 incrementPc = false;
                 break;
             case 0xC000: // CXKK: Set VX = random byte AND KK
